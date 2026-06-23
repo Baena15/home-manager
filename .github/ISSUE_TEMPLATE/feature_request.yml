@@ -1,0 +1,57 @@
+name: ✨ Feature Request
+description: Sugerir nueva feature
+labels: [enhancement, status:needs-review]
+body:
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Pre-flight Checks
+      options:
+        - label: He buscado en issues existentes y no es un duplicado
+          required: true
+        - label: Entiendo que este issue necesita `status:approved` antes de abrir un PR
+          required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: 🎯 Problema que Resuelve
+      description: El pain point que esta feature soluciona
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: 💡 Solucion Propuesta
+      description: Como deberia funcionar desde la perspectiva del usuario
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: 🏷️ Area Afectada
+      options:
+        - Scripts
+        - Skills
+        - API / Backend
+        - Frontend
+        - Documentacion
+        - CI / Workflows
+        - Base de Datos
+        - Otro
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 🔄 Alternativas Consideradas
+      description: Otras opciones o workarounds
+
+  - type: textarea
+    id: context
+    attributes:
+      label: 🔗 Contexto Adicional
+      description: Mockups, ejemplos, referencias

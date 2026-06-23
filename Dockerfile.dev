@@ -1,0 +1,26 @@
+# Dockerfile.dev - Development environment for Go
+# Used by docker-compose.yml (api service)
+# Supports hot-reload via volume mount + make dev
+
+FROM golang:1.23-alpine
+
+# Install system dependencies
+RUN apk add --no-cache git make curl
+
+# Install air for hot reload (optional but recommended)
+# If you prefer pure `go run`, comment this out and use `make dev`
+RUN go install github.com/air-verse/air@latest
+
+WORKDIR /app
+
+# Pre-download dependencies for better caching
+# Note: go.mod and go.sum are expected to exist in the generated project
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source code (overridden by docker-compose volume mount in dev)
+COPY . .
+
+# Default command uses air for hot reload
+# Change to ["make", "dev"] if you prefer go run without air
+CMD ["air", "-c", ".air.toml"]

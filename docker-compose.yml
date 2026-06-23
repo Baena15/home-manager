@@ -1,0 +1,75 @@
+# Docker Compose - Development Environment
+# Uso: docker-compose up -d
+
+services:
+  # Base de datos PostgreSQL
+  postgres:
+    image: postgres:16-alpine
+    container_name: home-manager-postgres
+    environment:
+      POSTGRES_USER: ${DB_USER:-devuser}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-devpass}
+      POSTGRES_DB: ${DB_NAME:-devdb}
+    ports:
+      - "${DB_PORT:-5433}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-devuser}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - dev-network
+
+  # Redis (para cache/sessions)
+  redis:
+    image: redis:7-alpine
+    container_name: home-manager-redis
+    ports:
+      - "${REDIS_PORT:-6380}:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - dev-network
+
+  # Backend API (opcional - para desarrollo con hot reload)
+  # Requiere un Dockerfile.dev en la raiz del proyecto
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: home-manager-api
+    environment:
+      - DATABASE_URL=postgresql://${DB_USER:-devuser}:${DB_PASSWORD:-devpass}@postgres:5432/${DB_NAME:-devdb}?sslmode=disable
+      - REDIS_URL=redis://redis:6379
+      - ENV=development
+      - PORT=8080
+    ports:
+      - "${API_PORT:-8080}:8080"
+    volumes:
+      - .:/app
+      - /app/vendor
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - dev-network
+    command: ["make", "dev"]
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  dev-network:
+    driver: bridge

@@ -1,0 +1,41 @@
+# Environment
+.env
+.env.local
+
+# Binaries
+*.exe
+*.dll
+*.so
+*.dylib
+bin/
+tmp/
+
+# Dependencies
+node_modules/
+vendor/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Testing
+*.test
+*.out
+coverage/
+
+# Build
+dist/
+build/
+
+# Engram (opcional, si quieres versionarlo quítalo)
+# engram/
