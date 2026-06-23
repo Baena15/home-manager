@@ -37,5 +37,8 @@ coverage/
 dist/
 build/
 
+# Agent tooling
+.atl/
+
 # Engram (opcional, si quieres versionarlo quítalo)
 # engram/

@@ -1,0 +1,8 @@
+change: mvp-shopping-foundation
+status: proposed
+phases:
+  - propose
+  - spec
+  - design
+  - tasks
+next: apply

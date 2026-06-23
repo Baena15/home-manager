@@ -1,38 +1,72 @@
-# AGENTS.md â€” Home Manager
+# AGENTS.md — Home Manager
 
-> This file contains essential information for AI coding agents working on this project.
-> All documentation and comments are primarily in **Spanish** for user-facing content, **English** for code internals.
+> Este archivo contiene información esencial para agentes de código AI que trabajan en Home Manager.
+> Documentación y UI en **español**. Código, variables y commits en **inglés**.
 >
-> âš ï¸ **NOTE**: This project was generated from Plantilla Madre (Gentleman Stack).
+> ⚠️ **NOTA**: Proyecto generado desde Plantilla Madre (Gentleman Stack) y personalizado para uso doméstico.
 
 ---
 
 ## Project Overview
 
-[Breve descripciÃ³n del proyecto]
+**Home Manager** es una aplicación web/PWA privada para gestionar el hogar de una pareja: listas de la compra inteligentes con histórico de precios, escaneo de productos (foto + OCR), registro de facturas y seguimiento de préstamos/gastos fijos.
 
 | Aspecto | Detalle |
 |---------|---------|
+| **Nombre** | Home Manager |
+| **Slug** | home-manager |
 | **Stack** | Go 1.23 + chi + PostgreSQL 16 + Redis 7 |
-| **PropÃ³sito** | [QuÃ© hace este proyecto] |
-| **Estado** | [Active/Development/Planning] |
-| **Idioma UI** | ðŸ‡ªðŸ‡¸ EspaÃ±ol |
-| **Idioma CÃ³digo** | ðŸ‡¬ðŸ‡§ InglÃ©s |
+| **Frontend** | Vanilla JavaScript PWA (instalable en iPhone) |
+| **Tema UI** | Verde pistacho (#B4D89E) — color favorito de la usuaria |
+| **Idioma UI** | 🇪🇸 Español |
+| **Idioma código** | 🇬🇧 Inglés |
+| **Deploy target** | Railway |
+| **Estado** | En desarrollo / SDD activo |
 
 ---
 
 ## Technology Stack
 
-| Capa | TecnologÃ­a |
+| Capa | Tecnología |
 |------|------------|
 | **Backend** | Go 1.23+ |
-| **Router** | [chi](https://github.com/go-chi/chi) |
-| **Database** | PostgreSQL 16 |
-| **Cache** | Redis 7 |
-| **Auth** | JWT con bcrypt |
-| **Frontend** | Vanilla JavaScript (zero frameworks) |
-| **Styling** | CSS custom properties, Catppuccin theme |
-| **DevOps** | Docker Compose, GitHub Actions |
+| **Router** | [chi](https://github.com/go-chi/chi) v5 |
+| **Base de datos** | PostgreSQL 16 |
+| **Caché / sesiones** | Redis 7 |
+| **Auth** | JWT + bcrypt (login simple para 2 usuarios) |
+| **Frontend** | Vanilla JS, PWA, cámara + OCR (Tesseract.js) |
+| **Estilos** | CSS custom properties, tema verde pistacho |
+| **DevOps** | Docker Compose (dev), Railway (prod) |
+
+---
+
+## Funcionalidades principales
+
+1. **Listas de la compra**
+   - Crear listas de compra.
+   - Añadir productos reales con nombre, cantidad, precio y tienda.
+   - Histórico de precios por producto.
+   - Precio estimado/cerrado de la lista basado en el último precio conocido.
+
+2. **Escaneo de productos**
+   - Tomar foto al producto + precio.
+   - OCR con Tesseract.js para reconocer nombre y precio.
+   - Guardar producto en la base de datos.
+   - Añadir directamente a la lista activa.
+
+3. **Facturas del hogar**
+   - Registrar facturas recurrentes (luz, agua, gas, internet, etc.).
+   - Desglose de gastos semanal y mensual.
+
+4. **Préstamos y gastos fijos**
+   - Registrar préstamos con cuota mensual.
+   - Marcar gastos fijos recurrentes.
+   - Impacto en el balance mensual.
+
+5. **Dashboard económico**
+   - Gastos del mes actual.
+   - Gastos de la semana.
+   - Comparativa mensual simple.
 
 ---
 
@@ -40,135 +74,106 @@
 
 ```
 home-manager/
-â”œâ”€â”€ cmd/api/                 # Entry point (main.go)
-â”œâ”€â”€ internal/
-â”‚   â”œâ”€â”€ handlers/            # HTTP handlers
-â”‚   â”œâ”€â”€ middleware/          # Middleware
-â”‚   â”œâ”€â”€ store/               # Data access layer
-â”‚   â””â”€â”€ config/              # Configuration
-â”œâ”€â”€ pkg/                     # Public/reusable code
-â”œâ”€â”€ web/                     # Frontend assets (if applicable)
-â”œâ”€â”€ scripts/
-â”‚   â”œâ”€â”€ seed.ps1             # Database seeding
-â”‚   â”œâ”€â”€ test-api.ps1         # API endpoint testing
-â”‚   â””â”€â”€ db-reset.ps1         # Database reset
-â”œâ”€â”€ docs/
-â”‚   â””â”€â”€ CONVENTIONS.md       # Coding conventions
-â”œâ”€â”€ .claude/skills/          # 17+ SDD skills
-â”œâ”€â”€ .github/
-â”‚   â”œâ”€â”€ workflows/ci.yml     # CI/CD pipeline
-â”‚   â”œâ”€â”€ pull_request_template.md
-â”‚   â””â”€â”€ ISSUE_TEMPLATE/      # Issue forms
-â”œâ”€â”€ .vscode/                 # VS Code settings (optional)
-â”œâ”€â”€ Dockerfile.dev           # Dev environment
-â”œâ”€â”€ docker-compose.yml       # PostgreSQL + Redis + API
-â”œâ”€â”€ Makefile                 # Standard commands
-â”œâ”€â”€ .env.example             # Environment variables
-â”œâ”€â”€ .gitignore
-â”œâ”€â”€ SECURITY.md              # Pre-deploy security checklist
-â”œâ”€â”€ .cursorrules             # Cursor IDE rules
-â””â”€â”€ AGENTS.md                # This file
+├── cmd/api/                 # Entry point (main.go)
+├── internal/
+│   ├── handlers/            # HTTP handlers
+│   ├── middleware/          # Middleware (auth, logging)
+│   ├── store/               # Data access layer (PostgreSQL)
+│   └── config/              # Configuration
+├── pkg/                     # Public/reusable code
+├── web/                     # Frontend PWA (HTML, CSS, JS)
+│   ├── index.html
+│   ├── manifest.json
+│   ├── sw.js
+│   └── css/
+├── scripts/
+│   ├── seed.ps1             # Database seeding
+│   ├── test-api.ps1         # API smoke tests
+│   └── db-reset.ps1         # Database reset
+├── docs/
+│   └── CONVENTIONS.md       # Coding conventions
+├── .claude/skills/          # SDD skills
+├── .github/                 # GitHub templates y CI
+├── Dockerfile.dev
+├── docker-compose.yml
+├── Makefile
+├── .env.example
+├── .gitignore
+├── SECURITY.md
+└── AGENTS.md                # This file
 ```
 
 ---
 
-## Convenciones de CÃ³digo
+## Convenciones de Código
 
-### Idiomas
-- **UI/User-facing**: EspaÃ±ol
-- **CÃ³digo/Variables/Comentarios**: InglÃ©s
-- **Git Commits**: InglÃ©s (Conventional Commits)
-- **DocumentaciÃ³n tÃ©cnica**: EspaÃ±ol
+Ver `docs/CONVENTIONS.md` para el detalle completo. Puntos clave:
 
-### Estilo RÃ¡pido
-```go
-// â”€â”€â”€ Section Name â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-func FunctionName() error {
-    // errors en lowercase sin punto final
-    return fmt.Errorf("operation failed: %w", err)
-}
-```
-
-Ver `docs/CONVENTIONS.md` para convenciones completas:
-- Go, JavaScript, CSS
-- SQL y base de datos
-- API responses (formato JSON estÃ¡ndar)
-- Conventional Commits detallado
-- Naming conventions
-- Testing patterns
+- **UI / user-facing**: español.
+- **Código / variables / funciones / comentarios**: inglés.
+- **Commits**: inglés, Conventional Commits.
+- **Errores**: lowercase, sin punto final.
+- **SQL**: tablas en plural snake_case, columnas snake_case, queries parametrizadas.
+- **API responses**:
+  - Error: `{ "error": "...", "code": "...", "status": N }`
+  - Lista: `{ "data": [...], "meta": {...} }`
+  - Recurso: `{ "data": {...} }`
 
 ---
 
-## Comandos RÃ¡pidos
+## Comandos Rápidos
 
 ```bash
+make setup        # Copia .env.example a .env + go mod tidy
 make dev          # Iniciar servidor de desarrollo
 make test         # Ejecutar tests
-make test-watch   # Tests en watch mode
-make coverage     # Reporte de cobertura
 make build        # Compilar binario
-make lint         # Ejecutar linter
-make fmt          # Formatear cÃ³digo
+make lint         # Linter
+make fmt          # Formatear código
 make db-seed      # Poblar base de datos
 make db-reset     # Resetear base de datos
-make setup        # Setup inicial (copia .env.example a .env)
-make clean        # Limpiar binarios/cache
-make security-check # Checklist pre-deploy
+make security-check  # Checklist pre-deploy
 ```
 
 ### Docker Compose
+
 ```bash
-docker-compose up -d          # Iniciar PostgreSQL + Redis + API
+docker-compose up -d          # Levantar PostgreSQL + Redis + API
 docker-compose logs -f api    # Ver logs
 docker-compose down           # Detener todo
 ```
 
 ---
 
-## Variables de Entorno CrÃ­ticas
+## Variables de Entorno Críticas
 
-| Variable | DescripciÃ³n | Requerida |
+| Variable | Descripción | Requerida |
 |----------|-------------|-----------|
-| `DATABASE_URL` | PostgreSQL connection string | âœ… SÃ­ |
-| `JWT_SECRET` | JWT signing secret (>=32 chars) | âœ… SÃ­ |
-| `JWT_EXPIRATION_HOURS` | Token expiration (default: 24) | âš ï¸ Opcional |
-| `API_URL` | URL base de la API | âš ï¸ Opcional |
-| `PORT` | Puerto del servidor (default: 8080) | âš ï¸ Opcional |
-| `ENV` | Entorno (development/production) | âš ï¸ Opcional |
-| `EMAIL_PROVIDER` | Proveedor de email | âš ï¸ Opcional |
-| `EMAIL_API_KEY` | API key de email | âš ï¸ Opcional |
-| `EMAIL_FROM` | Email remitente | âš ï¸ Opcional |
+| `DATABASE_URL` | PostgreSQL connection string | ✅ Sí |
+| `JWT_SECRET` | JWT signing secret (>=32 chars) | ✅ Sí |
+| `JWT_EXPIRATION_HOURS` | Expiración del token (default: 24) | ⚠️ Opcional |
+| `API_URL` | URL base de la API | ⚠️ Opcional |
+| `PORT` | Puerto del servidor (default: 8080) | ⚠️ Opcional |
+| `ENV` | Entorno (development/production) | ⚠️ Opcional |
+| `REDIS_URL` | Redis connection string | ⚠️ Opcional |
 
 ---
 
 ## SDD Workflow
 
-Usamos Spec-Driven Development con 17+ skills:
+Usamos Spec-Driven Development:
 
-| Fase | Skill | PropÃ³sito |
+| Fase | Skill | Propósito |
 |------|-------|-----------|
-| 1 | **`/sdd-init`** | Inicializar proyecto |
-| 2 | **`/sdd-explore`** | Investigar/explorar antes de cambiar |
-| 3 | **`/sdd-spec`** | Especificar cambios |
-| 4 | **`/sdd-tasks`** | Dividir en tareas |
-| 5 | **`/sdd-apply`** | Implementar |
-| 6 | **`/sdd-verify`** | Verificar |
-| 7 | **`/sdd-archive`** | Archivar |
+| 1 | `/sdd-init` | Inicializar contexto del proyecto |
+| 2 | `/sdd-explore` | Investigar/explorar antes de cambiar |
+| 3 | `/sdd-spec` | Especificar cambios |
+| 4 | `/sdd-tasks` | Dividir en tareas |
+| 5 | `/sdd-apply` | Implementar |
+| 6 | `/sdd-verify` | Verificar |
+| 7 | `/sdd-archive` | Archivar |
 
-**Workflows adicionales:**
-- `/sdd-propose` â€” Crear propuestas de cambio
-- `/sdd-design` â€” Documentos de diseÃ±o tÃ©cnico
-- `/sdd-debug` â€” Debugging sistemÃ¡tico
-- `/sdd-refactor` â€” RefactorizaciÃ³n segura
-- `/issue-creation` â€” Crear issues en GitHub
-- `/branch-pr` â€” Crear pull requests
-- `/judgment-day` â€” Code review adversarial
-
-### Persistence Modes
-- **`engram`** â€” Persistent memory (cross-session)
-- **`openspec`** â€” Filesystem-based (versionable)
-- **`hybrid`** â€” Ambos
-- **`none`** â€” EfÃ­mero
+**Persistencia**: `hybrid` — usa `openspec/` para especificaciones versionables y `engram` para contexto entre sesiones.
 
 ---
 
@@ -177,8 +182,8 @@ Usamos Spec-Driven Development con 17+ skills:
 Este proyecto usa **engram** para memoria persistente entre sesiones:
 
 ```bash
-engram save "TÃ­tulo" "DescripciÃ³n"
-engram search "tÃ©rmino"
+engram save "Título" "Descripción"
+engram search "término"
 engram context home-manager
 ```
 
@@ -189,34 +194,31 @@ engram context home-manager
 Revisar `SECURITY.md` antes de cada deploy:
 
 - [ ] Secrets no commiteados, `.env` en `.gitignore`
-- [ ] JWT_SECRET >= 32 caracteres, expiraciÃ³n <= 24h
-- [ ] Passwords hasheadas (bcrypt/Argon2)
+- [ ] `JWT_SECRET` >= 32 caracteres, expiración <= 24h
+- [ ] Passwords hasheadas con bcrypt/Argon2
 - [ ] CORS configurado, rate limiting activo
 - [ ] SQL solo parametrizado
-- [ ] HTTPS en producciÃ³n
+- [ ] HTTPS forzado en producción (Railway)
 - [ ] Headers de seguridad (HSTS, CSP, X-Frame-Options)
 
 ---
 
 ## Checklist de Inicio
 
-- [ ] Personalizar este archivo (`AGENTS.md`)
-- [ ] Configurar `.env` con variables necesarias
-- [ ] Ejecutar `make setup` para inicializar
-- [ ] Probar `make dev` (servidor en :8080)
-- [ ] Probar `make test`
-- [ ] Configurar engram: `engram setup`
-- [ ] Revisar `docs/CONVENTIONS.md` con el equipo
-- [ ] Primer commit con cambios especÃ­ficos del proyecto
+- [x] Generar proyecto con `scripts/setup.ps1`
+- [x] Personalizar `AGENTS.md`
+- [x] Configurar `.env`
+- [x] Diseñar esquema de base de datos
+- [x] Implementar autenticación simple (2 usuarios)
+- [x] Implementar CRUD de productos
+- [x] Implementar listas de la compra
+- [x] Crear PWA con tema verde pistacho
+- [x] Preparar Dockerfile y Railway deploy
+- [ ] Implementar escaneo OCR en PWA
+- [ ] Implementar facturas y préstamos
+- [ ] Dashboard de gastos
+- [ ] Deploy en Railway
 
 ---
 
-## Contacto / Recursos
-
-- DocumentaciÃ³n: [links]
-- Repositorio: [link]
-- Issues: [link]
-
----
-
-*Generado desde Plantilla Madre â€” Gentleman Programming* ðŸ¤
+*Home Manager — Gentleman Programming* 🤝
