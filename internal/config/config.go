@@ -11,40 +11,40 @@ import (
 // ─── Constants ────────────────────────────────────────────────────
 
 const (
-	defaultPort              = "8080"
+	defaultPort               = "8080"
 	defaultJWTExpirationHours = 24
-	minJWTSecretLength       = 32
+	minJWTSecretLength        = 32
 )
 
 // ─── Config ─────────────────────────────────────────────────────────
 
 // Config holds all runtime configuration.
 type Config struct {
-	Port              string
-	DatabaseURL       string
-	JWTSecret         string
-	JWTExpiration     time.Duration
-	APIURL            string
-	Env               string
-	RedisURL          string
-	OwnerEmail        string
-	OwnerPassword     string
-	PartnerEmail      string
-	PartnerPassword   string
+	Port            string
+	DatabaseURL     string
+	JWTSecret       string
+	JWTExpiration   time.Duration
+	APIURL          string
+	Env             string
+	RedisURL        string
+	OwnerEmail      string
+	OwnerPassword   string
+	PartnerEmail    string
+	PartnerPassword string
 }
 
 // Load reads configuration from environment variables and validates it.
 func Load() (*Config, error) {
 	cfg := &Config{
-		Port:          getEnv("PORT", defaultPort),
-		DatabaseURL:   os.Getenv("DATABASE_URL"),
-		JWTSecret:     os.Getenv("JWT_SECRET"),
-		APIURL:        getEnv("API_URL", "http://localhost:"+getEnv("PORT", defaultPort)),
-		Env:           getEnv("ENV", "development"),
-		RedisURL:      os.Getenv("REDIS_URL"),
-		OwnerEmail:    getEnv("OWNER_EMAIL", "owner@home.local"),
-		OwnerPassword: os.Getenv("OWNER_PASSWORD"),
-		PartnerEmail:  getEnv("PARTNER_EMAIL", "partner@home.local"),
+		Port:            getEnv("PORT", defaultPort),
+		DatabaseURL:     os.Getenv("DATABASE_URL"),
+		JWTSecret:       os.Getenv("JWT_SECRET"),
+		APIURL:          getEnv("API_URL", "http://localhost:"+getEnv("PORT", defaultPort)),
+		Env:             getEnv("ENV", "development"),
+		RedisURL:        os.Getenv("REDIS_URL"),
+		OwnerEmail:      getEnv("OWNER_EMAIL", "owner@home.local"),
+		OwnerPassword:   os.Getenv("OWNER_PASSWORD"),
+		PartnerEmail:    getEnv("PARTNER_EMAIL", "partner@home.local"),
 		PartnerPassword: os.Getenv("PARTNER_PASSWORD"),
 	}
 

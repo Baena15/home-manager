@@ -1,8 +1,10 @@
 change: mvp-shopping-foundation
-status: proposed
+status: completed
 phases:
   - propose
   - spec
   - design
   - tasks
-next: apply
+  - apply
+  - verify
+next: archive

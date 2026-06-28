@@ -54,19 +54,33 @@
    - Guardar producto en la base de datos.
    - Añadir directamente a la lista activa.
 
-3. **Facturas del hogar**
+3. **Gastos personales y compartidos**
+   - Cada usuario registra sus gastos con descripción, importe, categoría y fecha.
+   - Visibilidad `privada` (solo el creador) o `compartida` (ambos usuarios).
+   - Gastos compartidos con porcentaje de división configurable.
+   - Soporte para gastos recurrentes mensuales.
+   - Listado filtrado por mes y visibilidad.
+
+4. **Ingresos personales y compartidos**
+   - Cada usuario registra sus ingresos con descripción, importe, categoría y fecha.
+   - Visibilidad `privada` o `compartida` configurable por ingreso.
+   - Soporte para ingresos recurrentes mensuales.
+   - Listado filtrado por mes y visibilidad.
+
+5. **Dashboard económico**
+   - Resumen mensual: ingresos, gastos y balance.
+   - Gráfico de barras: ingresos vs gastos por mes.
+   - Gráfico de líneas: evolución del balance mensual.
+   - Filtro por año.
+
+6. **Facturas del hogar (pendiente)**
    - Registrar facturas recurrentes (luz, agua, gas, internet, etc.).
    - Desglose de gastos semanal y mensual.
 
-4. **Préstamos y gastos fijos**
+7. **Préstamos y gastos fijos (pendiente)**
    - Registrar préstamos con cuota mensual.
    - Marcar gastos fijos recurrentes.
    - Impacto en el balance mensual.
-
-5. **Dashboard económico**
-   - Gastos del mes actual.
-   - Gastos de la semana.
-   - Comparativa mensual simple.
 
 ---
 
@@ -214,9 +228,12 @@ Revisar `SECURITY.md` antes de cada deploy:
 - [x] Implementar listas de la compra
 - [x] Crear PWA con tema verde pistacho
 - [x] Preparar Dockerfile y Railway deploy
+- [x] Registro de usuarios
+- [x] Gastos privados/compartidos con división configurable
+- [x] Ingresos privados/compartidos
+- [x] Dashboard económico con gráficos
 - [ ] Implementar escaneo OCR en PWA
 - [ ] Implementar facturas y préstamos
-- [ ] Dashboard de gastos
 - [ ] Deploy en Railway
 
 ---

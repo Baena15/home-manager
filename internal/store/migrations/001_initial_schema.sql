@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS users (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 
 -- ─── products ──────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS products (
@@ -23,8 +23,8 @@ CREATE TABLE IF NOT EXISTS products (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_products_name ON products(name);
-CREATE INDEX idx_products_category ON products(category);
+CREATE INDEX IF NOT EXISTS idx_products_name ON products(name);
+CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
 
 -- ─── product_prices ────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS product_prices (
@@ -35,8 +35,8 @@ CREATE TABLE IF NOT EXISTS product_prices (
     recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_product_prices_product_id ON product_prices(product_id);
-CREATE INDEX idx_product_prices_recorded_at ON product_prices(recorded_at);
+CREATE INDEX IF NOT EXISTS idx_product_prices_product_id ON product_prices(product_id);
+CREATE INDEX IF NOT EXISTS idx_product_prices_recorded_at ON product_prices(recorded_at);
 
 -- ─── shopping_lists ────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS shopping_lists (
@@ -49,8 +49,8 @@ CREATE TABLE IF NOT EXISTS shopping_lists (
     CONSTRAINT chk_shopping_lists_status CHECK (status IN ('active', 'completed'))
 );
 
-CREATE INDEX idx_shopping_lists_status ON shopping_lists(status);
-CREATE INDEX idx_shopping_lists_created_by ON shopping_lists(created_by);
+CREATE INDEX IF NOT EXISTS idx_shopping_lists_status ON shopping_lists(status);
+CREATE INDEX IF NOT EXISTS idx_shopping_lists_created_by ON shopping_lists(created_by);
 
 -- ─── shopping_list_items ───────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS shopping_list_items (
@@ -64,8 +64,8 @@ CREATE TABLE IF NOT EXISTS shopping_list_items (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_shopping_list_items_list_id ON shopping_list_items(list_id);
-CREATE INDEX idx_shopping_list_items_product_id ON shopping_list_items(product_id);
+CREATE INDEX IF NOT EXISTS idx_shopping_list_items_list_id ON shopping_list_items(list_id);
+CREATE INDEX IF NOT EXISTS idx_shopping_list_items_product_id ON shopping_list_items(product_id);
 
 -- ─── down migration ────────────────────────────────────────────────
 -- DROP TABLE IF EXISTS shopping_list_items;

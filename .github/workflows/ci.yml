@@ -1,5 +1,5 @@
 # CI/CD Pipeline - Gentleman Stack
-# Tests + Lint + Deploy automático
+# Tests + Lint + Deploy automático a Railway
 
 name: CI/CD
 
@@ -12,7 +12,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    
+
     services:
       postgres:
         image: postgres:16
@@ -31,12 +31,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Environment
+      - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
-        # O para Node: actions/setup-node@v4
-        # O para Python: actions/setup-python@v5
+          go-version: '1.25'
 
       - name: Cache Dependencies
         uses: actions/cache@v4
@@ -47,36 +45,41 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
 
       - name: Install Dependencies
-        run: make setup
+        run: go mod download
 
       - name: Run Linter
-        run: make lint
+        run: go vet ./...
 
       - name: Run Tests
-        run: make test
+        run: go test -v -race ./...
         env:
           DATABASE_URL: postgres://test:test@localhost:5433/testdb?sslmode=disable
           JWT_SECRET: test-secret-key-32-characters-long
-
-      - name: Upload Coverage
-        uses: codecov/codecov-action@v4
-        with:
-          file: ./coverage.out
-          flags: unittests
-          name: codecov-umbrella
+          OWNER_PASSWORD: test-owner-password
+          PARTNER_PASSWORD: test-partner-password
 
   deploy:
     needs: test
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
-    
+
     steps:
       - uses: actions/checkout@v4
 
-      - name: Deploy to Production
-        run: make deploy
+      - name: Check Railway token
+        run: |
+          if [ -z "${{ secrets.RAILWAY_TOKEN }}" ]; then
+            echo "❌ RAILWAY_TOKEN secret is not configured"
+            exit 1
+          fi
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy to Railway
+        run: railway up
         env:
-          DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
 
       - name: Notify Success
         run: echo "✅ Deploy completado"

@@ -23,6 +23,10 @@ func (m *mockUserRepository) GetByEmail(ctx context.Context, email string) (*sto
 	return m.user, m.err
 }
 
+func (m *mockUserRepository) Create(ctx context.Context, email, passwordHash, role string) (*store.User, error) {
+	return m.user, m.err
+}
+
 func TestAuthHandler_Login_Success(t *testing.T) {
 	password := "password123"
 	hash, _ := auth.HashPassword(password)

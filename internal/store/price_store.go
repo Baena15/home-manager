@@ -11,11 +11,11 @@ import (
 
 // ProductPrice represents a price record for a product.
 type ProductPrice struct {
-	ID          string    `json:"id"`
-	ProductID   string    `json:"product_id"`
-	Store       string    `json:"store"`
-	Amount      float64   `json:"amount"`
-	RecordedAt  time.Time `json:"recorded_at"`
+	ID         string    `json:"id"`
+	ProductID  string    `json:"product_id"`
+	Store      string    `json:"store"`
+	Amount     float64   `json:"amount"`
+	RecordedAt time.Time `json:"recorded_at"`
 }
 
 // ─── PriceStore ─────────────────────────────────────────────────────

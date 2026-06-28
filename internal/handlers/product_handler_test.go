@@ -15,7 +15,7 @@ import (
 )
 
 type mockProductRepository struct {
-	product *store.Product
+	product  *store.Product
 	products []store.Product
 	total    int
 	exists   bool

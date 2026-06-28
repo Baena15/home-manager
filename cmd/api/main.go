@@ -62,6 +62,15 @@ func main() {
 	listItemStore := store.NewListItemStore(db)
 	listHandler := handlers.NewListHandler(listStore, listItemStore, productStore)
 
+	expenseStore := store.NewExpenseStore(db)
+	expenseHandler := handlers.NewExpenseHandler(expenseStore)
+
+	incomeStore := store.NewIncomeStore(db)
+	incomeHandler := handlers.NewIncomeHandler(incomeStore)
+
+	dashboardStore := store.NewDashboardStore(db)
+	dashboardHandler := handlers.NewDashboardHandler(dashboardStore)
+
 	r := chi.NewRouter()
 
 	r.Use(middleware.Logger)
@@ -74,6 +83,7 @@ func main() {
 	})
 
 	r.Post("/api/v1/auth/login", authHandler.Login)
+	r.Post("/api/v1/auth/register", authHandler.Register)
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Use(middleware.SetHeader("Content-Type", "application/json"))
@@ -115,6 +125,31 @@ func main() {
 					r.Delete("/", listHandler.RemoveItem)
 				})
 			})
+		})
+
+		r.Route("/expenses", func(r chi.Router) {
+			r.Post("/", expenseHandler.Create)
+			r.Get("/", expenseHandler.List)
+			r.Route("/{id}", func(r chi.Router) {
+				r.Get("/", expenseHandler.Get)
+				r.Put("/", expenseHandler.Update)
+				r.Delete("/", expenseHandler.Delete)
+			})
+		})
+
+		r.Route("/incomes", func(r chi.Router) {
+			r.Post("/", incomeHandler.Create)
+			r.Get("/", incomeHandler.List)
+			r.Route("/{id}", func(r chi.Router) {
+				r.Get("/", incomeHandler.Get)
+				r.Put("/", incomeHandler.Update)
+				r.Delete("/", incomeHandler.Delete)
+			})
+		})
+
+		r.Route("/dashboard", func(r chi.Router) {
+			r.Get("/summary", dashboardHandler.Summary)
+			r.Get("/monthly", dashboardHandler.Monthly)
 		})
 	})
 

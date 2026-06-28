@@ -12,15 +12,15 @@ import (
 
 // Product represents a household product.
 type Product struct {
-	ID           string     `json:"id"`
-	Name         string     `json:"name"`
-	Unit         string     `json:"unit"`
-	Category     string     `json:"category,omitempty"`
-	LatestPrice  *float64   `json:"latest_price,omitempty"`
-	LatestStore  string     `json:"latest_store,omitempty"`
+	ID            string     `json:"id"`
+	Name          string     `json:"name"`
+	Unit          string     `json:"unit"`
+	Category      string     `json:"category,omitempty"`
+	LatestPrice   *float64   `json:"latest_price,omitempty"`
+	LatestStore   string     `json:"latest_store,omitempty"`
 	LatestPriceAt *time.Time `json:"latest_price_at,omitempty"`
-	CreatedAt    time.Time  `json:"created_at"`
-	UpdatedAt    time.Time  `json:"updated_at"`
+	CreatedAt     time.Time  `json:"created_at"`
+	UpdatedAt     time.Time  `json:"updated_at"`
 }
 
 // ─── ProductStore ───────────────────────────────────────────────────

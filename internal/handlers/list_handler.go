@@ -36,9 +36,9 @@ type ListItemRepository interface {
 
 // ListHandler handles shopping list endpoints.
 type ListHandler struct {
-	lists      ListRepository
-	items      ListItemRepository
-	products   ProductRepository
+	lists    ListRepository
+	items    ListItemRepository
+	products ProductRepository
 }
 
 // NewListHandler creates a new ListHandler.
@@ -65,8 +65,8 @@ type updateListStatusRequest struct {
 }
 
 type addItemRequest struct {
-	ProductID   string  `json:"product_id"`
-	Quantity    float64 `json:"quantity"`
+	ProductID   string   `json:"product_id"`
+	Quantity    float64  `json:"quantity"`
 	CustomPrice *float64 `json:"custom_price,omitempty"`
 }
 

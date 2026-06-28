@@ -35,6 +35,27 @@ func NewUserStore(db *DB) *UserStore {
 	return &UserStore{db: db}
 }
 
+// GetByID returns a user by ID.
+func (s *UserStore) GetByID(ctx context.Context, id string) (*User, error) {
+	query := `
+		SELECT id, email, password_hash, role, created_at
+		FROM users
+		WHERE id = $1
+	`
+
+	row := s.db.QueryRowContext(ctx, query, id)
+
+	user := &User{}
+	if err := row.Scan(&user.ID, &user.Email, &user.PasswordHash, &user.Role, &user.CreatedAt); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, ErrUserNotFound
+		}
+		return nil, fmt.Errorf("failed to get user: %w", err)
+	}
+
+	return user, nil
+}
+
 // GetByEmail returns a user by email address.
 func (s *UserStore) GetByEmail(ctx context.Context, email string) (*User, error) {
 	query := `

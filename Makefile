@@ -61,8 +61,9 @@ build:
 
 # ─── Deploy ─────────────────────────────────────────────────────────
 deploy:
-	@echo "🚀 Deploying..."
-	@echo "⚠️  TODO: Configura tu comando de deploy (fly deploy, ssh, docker push, etc.)"
+	@echo "🚀 Deploying to Railway..."
+	@which railway >/dev/null 2>&1 || (echo "⚠️  Railway CLI no encontrado. Instálalo con: npm install -g @railway/cli" && exit 1)
+	@railway up
 	@echo "✅ Deploy completado"
 
 # ─── Clean ──────────────────────────────────────────────────────────
