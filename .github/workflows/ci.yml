@@ -66,10 +66,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check Railway token
+      - name: Check Railway config
         run: |
           if [ -z "${{ secrets.RAILWAY_TOKEN }}" ]; then
             echo "❌ RAILWAY_TOKEN secret is not configured"
+            exit 1
+          fi
+          if [ -z "${{ secrets.RAILWAY_SERVICE }}" ]; then
+            echo "❌ RAILWAY_SERVICE secret is not configured"
             exit 1
           fi
 
@@ -77,7 +81,7 @@ jobs:
         run: npm install -g @railway/cli
 
       - name: Deploy to Railway
-        run: railway up
+        run: railway up --service "${{ secrets.RAILWAY_SERVICE }}"
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
 
