@@ -1,4 +1,4 @@
-const CACHE_NAME = 'home-manager-v1';
+const CACHE_NAME = 'home-manager-v2';
 const ASSETS = [
   '/',
   '/index.html',
@@ -31,16 +31,18 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   if (event.request.url.startsWith('/api/')) return;
 
+  // Stale-while-revalidate: serve cached version quickly, update in background
   event.respondWith(
     caches.match(event.request).then((cached) => {
-      return (
-        cached ||
-        fetch(event.request).then((response) => {
-          const clone = response.clone();
+      const fetchPromise = fetch(event.request).then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200) {
+          const clone = networkResponse.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-          return response;
-        })
-      );
+        }
+        return networkResponse;
+      }).catch(() => cached);
+
+      return cached || fetchPromise;
     })
   );
 });
