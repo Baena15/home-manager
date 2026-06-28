@@ -4,6 +4,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"net/http"
 	"time"
 
@@ -116,6 +117,7 @@ func (h *IncomeHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	incomes, err := h.incomes.List(r.Context(), userID, visibility, from, to)
 	if err != nil {
+		log.Printf("failed to list incomes: %v", err)
 		respondError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list incomes")
 		return
 	}

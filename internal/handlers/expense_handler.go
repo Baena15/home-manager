@@ -4,6 +4,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"net/http"
 	"time"
 
@@ -124,6 +125,7 @@ func (h *ExpenseHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	expenses, err := h.expenses.List(r.Context(), userID, visibility, from, to)
 	if err != nil {
+		log.Printf("failed to list expenses: %v", err)
 		respondError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list expenses")
 		return
 	}

@@ -512,8 +512,7 @@
   async function loadExpenses() {
     const filter = document.getElementById('exp-filter').value;
     const month = document.getElementById('exp-month').value;
-    const from = `${month}-01`;
-    const to = `${month}-31`;
+    const { from, to } = getMonthBounds(month);
 
     try {
       const params = new URLSearchParams();
@@ -645,8 +644,7 @@
   async function loadIncomes() {
     const filter = document.getElementById('inc-filter').value;
     const month = document.getElementById('inc-month').value;
-    const from = `${month}-01`;
-    const to = `${month}-31`;
+    const { from, to } = getMonthBounds(month);
 
     try {
       const params = new URLSearchParams();
@@ -971,6 +969,14 @@
   function formatDate(dateString) {
     const date = new Date(dateString);
     return date.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
+
+  function getMonthBounds(month) {
+    const [year, monthNum] = month.split('-').map(Number);
+    const from = `${month}-01`;
+    const toDate = new Date(year, monthNum, 0);
+    const to = toDate.toISOString().split('T')[0];
+    return { from, to };
   }
 
   function visibilityBadge(visibility) {
