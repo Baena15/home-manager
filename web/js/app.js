@@ -741,12 +741,15 @@
       const container = document.getElementById('summary-cards');
       container.innerHTML = `
         <div class="summary-card income">
-          <p class="summary-label">Ingresos</p>
+          <p class="summary-label">Tus ingresos</p>
           <p class="summary-value">${summary.income_total.toFixed(2)} €</p>
         </div>
         <div class="summary-card expense">
-          <p class="summary-label">Gastos</p>
+          <p class="summary-label">Tus gastos</p>
           <p class="summary-value">${summary.expense_total.toFixed(2)} €</p>
+          <p class="summary-detail" style="font-size:0.75rem;color:#6B7280;margin-top:0.25rem;">
+            Compartidos: ${summary.shared_expense_total.toFixed(2)} € · Privados: ${summary.private_expense_total.toFixed(2)} €
+          </p>
         </div>
         <div class="summary-card ${summary.balance >= 0 ? 'positive' : 'negative'}">
           <p class="summary-label">Balance</p>

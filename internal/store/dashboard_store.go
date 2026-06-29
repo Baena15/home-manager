@@ -10,19 +10,23 @@ import (
 
 // MonthlySummary holds aggregated income and expense totals for a month.
 type MonthlySummary struct {
-	IncomeTotal  float64 `json:"income_total"`
-	ExpenseTotal float64 `json:"expense_total"`
-	Balance      float64 `json:"balance"`
+	IncomeTotal         float64 `json:"income_total"`
+	SharedExpenseTotal  float64 `json:"shared_expense_total"`
+	PrivateExpenseTotal float64 `json:"private_expense_total"`
+	ExpenseTotal        float64 `json:"expense_total"`
+	Balance             float64 `json:"balance"`
 }
 
 // ─── MonthData ──────────────────────────────────────────────────────
 
 // MonthData holds income and expense totals for a single month.
 type MonthData struct {
-	Month        string  `json:"month"`
-	IncomeTotal  float64 `json:"income_total"`
-	ExpenseTotal float64 `json:"expense_total"`
-	Balance      float64 `json:"balance"`
+	Month               string  `json:"month"`
+	IncomeTotal         float64 `json:"income_total"`
+	SharedExpenseTotal  float64 `json:"shared_expense_total"`
+	PrivateExpenseTotal float64 `json:"private_expense_total"`
+	ExpenseTotal        float64 `json:"expense_total"`
+	Balance             float64 `json:"balance"`
 }
 
 // ─── DashboardStore ─────────────────────────────────────────────────
@@ -42,11 +46,26 @@ func (s *DashboardStore) MonthlySummary(ctx context.Context, userID, month strin
 	incomeQuery := `
 		SELECT COALESCE(SUM(amount), 0)
 		FROM incomes
-		WHERE (user_id = $1 OR visibility = 'shared')
+		WHERE user_id = $1
 		  AND TO_CHAR(income_date, 'YYYY-MM') = $2
 	`
 	expenseQuery := `
-		SELECT COALESCE(SUM(amount), 0)
+		SELECT
+			COALESCE(SUM(CASE
+				WHEN visibility = 'shared' AND user_id = $1 THEN amount * split_percentage / 100
+				WHEN visibility = 'shared' AND user_id != $1 THEN amount * (100 - split_percentage) / 100
+				WHEN visibility = 'private' AND user_id = $1 THEN amount
+				ELSE 0
+			END), 0) AS expense_total,
+			COALESCE(SUM(CASE
+				WHEN visibility = 'shared' AND user_id = $1 THEN amount * split_percentage / 100
+				WHEN visibility = 'shared' AND user_id != $1 THEN amount * (100 - split_percentage) / 100
+				ELSE 0
+			END), 0) AS shared_expense_total,
+			COALESCE(SUM(CASE
+				WHEN visibility = 'private' AND user_id = $1 THEN amount
+				ELSE 0
+			END), 0) AS private_expense_total
 		FROM expenses
 		WHERE (user_id = $1 OR visibility = 'shared')
 		  AND TO_CHAR(expense_date, 'YYYY-MM') = $2
@@ -56,7 +75,11 @@ func (s *DashboardStore) MonthlySummary(ctx context.Context, userID, month strin
 	if err := s.db.QueryRowContext(ctx, incomeQuery, userID, month).Scan(&summary.IncomeTotal); err != nil {
 		return nil, fmt.Errorf("failed to calculate income total: %w", err)
 	}
-	if err := s.db.QueryRowContext(ctx, expenseQuery, userID, month).Scan(&summary.ExpenseTotal); err != nil {
+	if err := s.db.QueryRowContext(ctx, expenseQuery, userID, month).Scan(
+		&summary.ExpenseTotal,
+		&summary.SharedExpenseTotal,
+		&summary.PrivateExpenseTotal,
+	); err != nil {
 		return nil, fmt.Errorf("failed to calculate expense total: %w", err)
 	}
 
@@ -67,17 +90,32 @@ func (s *DashboardStore) MonthlySummary(ctx context.Context, userID, month strin
 // MonthlyTotals returns income and expense totals for each month of the year.
 func (s *DashboardStore) MonthlyTotals(ctx context.Context, userID, year string) ([]MonthData, error) {
 	query := `
-		SELECT months.month, COALESCE(income_totals.total, 0) AS income_total, COALESCE(expense_totals.total, 0) AS expense_total
+		SELECT
+			months.month,
+			COALESCE(income_totals.total, 0) AS income_total,
+			COALESCE(expense_totals.shared_total, 0) AS shared_expense_total,
+			COALESCE(expense_totals.private_total, 0) AS private_expense_total,
+			COALESCE(expense_totals.shared_total, 0) + COALESCE(expense_totals.private_total, 0) AS expense_total
 		FROM generate_series(1, 12) AS months(month)
 		LEFT JOIN (
 			SELECT EXTRACT(MONTH FROM income_date)::int AS month, COALESCE(SUM(amount), 0) AS total
 			FROM incomes
-			WHERE (user_id = $1 OR visibility = 'shared')
+			WHERE user_id = $1
 			  AND EXTRACT(YEAR FROM income_date)::text = $2
 			GROUP BY month
 		) AS income_totals ON months.month = income_totals.month
 		LEFT JOIN (
-			SELECT EXTRACT(MONTH FROM expense_date)::int AS month, COALESCE(SUM(amount), 0) AS total
+			SELECT
+				EXTRACT(MONTH FROM expense_date)::int AS month,
+				COALESCE(SUM(CASE
+					WHEN visibility = 'shared' AND user_id = $1 THEN amount * split_percentage / 100
+					WHEN visibility = 'shared' AND user_id != $1 THEN amount * (100 - split_percentage) / 100
+					ELSE 0
+				END), 0) AS shared_total,
+				COALESCE(SUM(CASE
+					WHEN visibility = 'private' AND user_id = $1 THEN amount
+					ELSE 0
+				END), 0) AS private_total
 			FROM expenses
 			WHERE (user_id = $1 OR visibility = 'shared')
 			  AND EXTRACT(YEAR FROM expense_date)::text = $2
@@ -96,7 +134,7 @@ func (s *DashboardStore) MonthlyTotals(ctx context.Context, userID, year string)
 	for rows.Next() {
 		var month int
 		var item MonthData
-		if err := rows.Scan(&month, &item.IncomeTotal, &item.ExpenseTotal); err != nil {
+		if err := rows.Scan(&month, &item.IncomeTotal, &item.SharedExpenseTotal, &item.PrivateExpenseTotal, &item.ExpenseTotal); err != nil {
 			return nil, fmt.Errorf("failed to scan monthly total: %w", err)
 		}
 		item.Month = fmt.Sprintf("%s-%02d", year, month)
