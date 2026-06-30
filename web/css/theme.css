@@ -347,3 +347,40 @@ html, body {
 .flex-between { display: flex; justify-content: space-between; align-items: center; }
 .gap-1 { gap: 0.5rem; }
 .text-center { text-align: center; }
+
+/* ─── Day groups (expenses / incomes) ─────────────────────────────── */
+
+.day-group {
+  margin-bottom: 1rem;
+}
+
+.day-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  background: var(--color-pistachio-light);
+  border-radius: var(--radius-sm);
+  margin-bottom: 0.5rem;
+}
+
+.day-label {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--color-text);
+  text-transform: capitalize;
+}
+
+.day-total {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--color-text);
+}
+
+.day-item {
+  margin-bottom: 0.5rem;
+}
+
+.day-item:last-child {
+  margin-bottom: 0;
+}

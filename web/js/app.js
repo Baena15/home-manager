@@ -528,23 +528,35 @@
       }
 
       const total = data.data.reduce((sum, e) => sum + e.amount, 0);
+      const grouped = groupByDay(data.data, 'expense_date');
 
       container.innerHTML = `
         <div class="flex-between mb-1">
-          <span class="list-item-subtitle">Total: <strong>${total.toFixed(2)} €</strong></span>
+          <span class="list-item-subtitle">Total del mes: <strong>${total.toFixed(2)} €</strong></span>
         </div>
-        ${data.data.map(e => `
-          <div class="list-item">
-            <div class="list-item-info">
-              <p class="list-item-title">${escapeHtml(e.description)} ${visibilityBadge(e.visibility)}</p>
-              <p class="list-item-subtitle">${formatDate(e.expense_date)}${e.category ? ` · ${escapeHtml(e.category)}` : ''}${e.is_recurring ? ' · 🔄' : ''}${e.visibility === 'shared' ? ` · ${e.split_percentage}% tuyo` : ''}</p>
+        ${grouped.map(([day, items]) => {
+          const dayTotal = items.reduce((sum, e) => sum + e.amount, 0);
+          return `
+            <div class="day-group">
+              <div class="day-header">
+                <span class="day-label">${formatDayLabel(day)}</span>
+                <span class="day-total">${dayTotal.toFixed(2)} €</span>
+              </div>
+              ${items.map(e => `
+                <div class="list-item day-item">
+                  <div class="list-item-info">
+                    <p class="list-item-title">${escapeHtml(e.description)} ${visibilityBadge(e.visibility)}</p>
+                    <p class="list-item-subtitle">${e.category ? `${escapeHtml(e.category)} · ` : ''}${e.is_recurring ? '🔄 · ' : ''}${e.visibility === 'shared' ? `${e.split_percentage}% tuyo` : ''}</p>
+                  </div>
+                  <div class="list-item-actions">
+                    <span class="total-badge">${e.amount.toFixed(2)} €</span>
+                    ${e.user_id === currentUser?.user_id ? `<button class="btn-icon delete-expense" data-id="${e.id}">🗑️</button>` : ''}
+                  </div>
+                </div>
+              `).join('')}
             </div>
-            <div class="list-item-actions">
-              <span class="total-badge">${e.amount.toFixed(2)} €</span>
-              ${e.user_id === currentUser?.user_id ? `<button class="btn-icon delete-expense" data-id="${e.id}">🗑️</button>` : ''}
-            </div>
-          </div>
-        `).join('')}
+          `;
+        }).join('')}
       `;
 
       container.querySelectorAll('.delete-expense').forEach(btn => {
@@ -660,23 +672,35 @@
       }
 
       const total = data.data.reduce((sum, i) => sum + i.amount, 0);
+      const grouped = groupByDay(data.data, 'income_date');
 
       container.innerHTML = `
         <div class="flex-between mb-1">
-          <span class="list-item-subtitle">Total: <strong>${total.toFixed(2)} €</strong></span>
+          <span class="list-item-subtitle">Total del mes: <strong>${total.toFixed(2)} €</strong></span>
         </div>
-        ${data.data.map(i => `
-          <div class="list-item">
-            <div class="list-item-info">
-              <p class="list-item-title">${escapeHtml(i.description)} ${visibilityBadge(i.visibility)}</p>
-              <p class="list-item-subtitle">${formatDate(i.income_date)}${i.category ? ` · ${escapeHtml(i.category)}` : ''}${i.is_recurring ? ' · 🔄' : ''}</p>
+        ${grouped.map(([day, items]) => {
+          const dayTotal = items.reduce((sum, i) => sum + i.amount, 0);
+          return `
+            <div class="day-group">
+              <div class="day-header">
+                <span class="day-label">${formatDayLabel(day)}</span>
+                <span class="day-total">${dayTotal.toFixed(2)} €</span>
+              </div>
+              ${items.map(i => `
+                <div class="list-item day-item">
+                  <div class="list-item-info">
+                    <p class="list-item-title">${escapeHtml(i.description)} ${visibilityBadge(i.visibility)}</p>
+                    <p class="list-item-subtitle">${i.category ? `${escapeHtml(i.category)} · ` : ''}${i.is_recurring ? '🔄 · ' : ''}</p>
+                  </div>
+                  <div class="list-item-actions">
+                    <span class="total-badge">${i.amount.toFixed(2)} €</span>
+                    ${i.user_id === currentUser?.user_id ? `<button class="btn-icon delete-income" data-id="${i.id}">🗑️</button>` : ''}
+                  </div>
+                </div>
+              `).join('')}
             </div>
-            <div class="list-item-actions">
-              <span class="total-badge">${i.amount.toFixed(2)} €</span>
-              ${i.user_id === currentUser?.user_id ? `<button class="btn-icon delete-income" data-id="${i.id}">🗑️</button>` : ''}
-            </div>
-          </div>
-        `).join('')}
+          `;
+        }).join('')}
       `;
 
       container.querySelectorAll('.delete-income').forEach(btn => {
@@ -972,6 +996,38 @@
   function formatDate(dateString) {
     const date = new Date(dateString);
     return date.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
+
+  function formatDayLabel(dateString) {
+    const date = new Date(dateString);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    const isSameDay = (a, b) =>
+      a.getFullYear() === b.getFullYear() &&
+      a.getMonth() === b.getMonth() &&
+      a.getDate() === b.getDate();
+
+    if (isSameDay(date, today)) return 'Hoy';
+    if (isSameDay(date, yesterday)) return 'Ayer';
+
+    return date.toLocaleDateString('es-ES', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+  }
+
+  function groupByDay(items, dateField) {
+    const groups = new Map();
+    items.forEach(item => {
+      const day = item[dateField].slice(0, 10);
+      if (!groups.has(day)) groups.set(day, []);
+      groups.get(day).push(item);
+    });
+    return Array.from(groups.entries());
   }
 
   function getMonthBounds(month) {
