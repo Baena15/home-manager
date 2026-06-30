@@ -1034,7 +1034,7 @@
     const [year, monthNum] = month.split('-').map(Number);
     const from = `${month}-01`;
     const toDate = new Date(year, monthNum, 0);
-    const to = toDate.toISOString().split('T')[0];
+    const to = `${year}-${String(monthNum).padStart(2, '0')}-${String(toDate.getDate()).padStart(2, '0')}`;
     return { from, to };
   }
 
