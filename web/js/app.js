@@ -550,7 +550,7 @@
                   </div>
                   <div class="list-item-actions">
                     <span class="total-badge">${e.amount.toFixed(2)} €</span>
-                    ${e.user_id === currentUser?.user_id ? `<button class="btn-icon delete-expense" data-id="${e.id}">🗑️</button>` : ''}
+                    ${e.user_id === (currentUser?.id || currentUser?.user_id) ? `<button class="btn-icon delete-expense" data-id="${e.id}">🗑️</button>` : ''}
                   </div>
                 </div>
               `).join('')}
@@ -694,7 +694,7 @@
                   </div>
                   <div class="list-item-actions">
                     <span class="total-badge">${i.amount.toFixed(2)} €</span>
-                    ${i.user_id === currentUser?.user_id ? `<button class="btn-icon delete-income" data-id="${i.id}">🗑️</button>` : ''}
+                    ${i.user_id === (currentUser?.id || currentUser?.user_id) ? `<button class="btn-icon delete-income" data-id="${i.id}">🗑️</button>` : ''}
                   </div>
                 </div>
               `).join('')}
