@@ -4,6 +4,7 @@
   const main = document.getElementById('main');
   const nav = document.getElementById('nav');
   const toast = document.getElementById('toast');
+  const logoutBtn = document.getElementById('logout-btn');
 
   let token = localStorage.getItem('hm_token') || '';
   let currentUser = null;
@@ -14,6 +15,7 @@
   async function render() {
     if (!token) {
       nav.hidden = true;
+      if (logoutBtn) logoutBtn.hidden = true;
       renderLogin();
       return;
     }
@@ -30,6 +32,7 @@
     }
 
     nav.hidden = false;
+    if (logoutBtn) logoutBtn.hidden = false;
     updateNav();
 
     switch (currentView) {
@@ -69,6 +72,13 @@
     btn.addEventListener('click', () => navigate(btn.dataset.view));
   });
 
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', () => {
+      logout();
+      window.location.reload();
+    });
+  }
+
   // ─── API helpers ──────────────────────────────────────────────────
 
   async function api(method, path, body) {
@@ -94,6 +104,8 @@
     token = '';
     currentUser = null;
     localStorage.removeItem('hm_token');
+    localStorage.removeItem('hm_view');
+    if (logoutBtn) logoutBtn.hidden = true;
     render();
   }
 
