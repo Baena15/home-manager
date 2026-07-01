@@ -68,6 +68,9 @@ func main() {
 	incomeStore := store.NewIncomeStore(db)
 	incomeHandler := handlers.NewIncomeHandler(incomeStore)
 
+	settlementStore := store.NewSettlementStore(db)
+	settlementHandler := handlers.NewSettlementHandler(settlementStore, userStore)
+
 	dashboardStore := store.NewDashboardStore(db)
 	dashboardHandler := handlers.NewDashboardHandler(dashboardStore)
 
@@ -134,6 +137,7 @@ func main() {
 				r.Get("/", expenseHandler.Get)
 				r.Put("/", expenseHandler.Update)
 				r.Delete("/", expenseHandler.Delete)
+				r.Patch("/settle", expenseHandler.Settle)
 			})
 		})
 
@@ -147,9 +151,19 @@ func main() {
 			})
 		})
 
+		r.Route("/settlements", func(r chi.Router) {
+			r.Post("/", settlementHandler.Create)
+			r.Get("/", settlementHandler.List)
+			r.Route("/{id}", func(r chi.Router) {
+				r.Get("/", settlementHandler.Get)
+				r.Delete("/", settlementHandler.Delete)
+			})
+		})
+
 		r.Route("/dashboard", func(r chi.Router) {
 			r.Get("/summary", dashboardHandler.Summary)
 			r.Get("/monthly", dashboardHandler.Monthly)
+			r.Get("/balance", dashboardHandler.Balance)
 		})
 	})
 

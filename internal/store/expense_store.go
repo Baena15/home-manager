@@ -12,17 +12,19 @@ import (
 
 // Expense represents a household expense.
 type Expense struct {
-	ID              string    `json:"id"`
-	UserID          string    `json:"user_id"`
-	Amount          float64   `json:"amount"`
-	Description     string    `json:"description"`
-	Category        string    `json:"category"`
-	Visibility      string    `json:"visibility"`
-	SplitPercentage float64   `json:"split_percentage"`
-	ExpenseDate     time.Time `json:"expense_date"`
-	IsRecurring     bool      `json:"is_recurring"`
-	CreatedAt       time.Time `json:"created_at"`
-	UpdatedAt       time.Time `json:"updated_at"`
+	ID              string     `json:"id"`
+	UserID          string     `json:"user_id"`
+	Amount          float64    `json:"amount"`
+	Description     string     `json:"description"`
+	Category        string     `json:"category"`
+	Visibility      string     `json:"visibility"`
+	SplitPercentage float64    `json:"split_percentage"`
+	ExpenseDate     time.Time  `json:"expense_date"`
+	IsRecurring     bool       `json:"is_recurring"`
+	SettledAt       *time.Time `json:"settled_at"`
+	SettledBy       *string    `json:"settled_by"`
+	CreatedAt       time.Time  `json:"created_at"`
+	UpdatedAt       time.Time  `json:"updated_at"`
 }
 
 // ─── ExpenseStore ───────────────────────────────────────────────────
@@ -42,13 +44,14 @@ func (s *ExpenseStore) Create(ctx context.Context, userID string, amount float64
 	query := `
 		INSERT INTO expenses (user_id, amount, description, category, visibility, split_percentage, expense_date, is_recurring)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-		RETURNING id, user_id, amount, description, category, visibility, split_percentage, expense_date, is_recurring, created_at, updated_at
+		RETURNING id, user_id, amount, description, category, visibility, split_percentage, expense_date, is_recurring, settled_at, settled_by, created_at, updated_at
 	`
 
 	expense := &Expense{}
 	if err := s.db.QueryRowContext(ctx, query, userID, amount, description, category, visibility, splitPercentage, expenseDate, isRecurring).Scan(
 		&expense.ID, &expense.UserID, &expense.Amount, &expense.Description, &expense.Category,
 		&expense.Visibility, &expense.SplitPercentage, &expense.ExpenseDate, &expense.IsRecurring,
+		&expense.SettledAt, &expense.SettledBy,
 		&expense.CreatedAt, &expense.UpdatedAt,
 	); err != nil {
 		return nil, fmt.Errorf("failed to create expense: %w", err)
@@ -60,7 +63,7 @@ func (s *ExpenseStore) Create(ctx context.Context, userID string, amount float64
 // GetByID returns an expense by ID.
 func (s *ExpenseStore) GetByID(ctx context.Context, id string) (*Expense, error) {
 	query := `
-		SELECT id, user_id, amount, description, category, visibility, split_percentage, expense_date, is_recurring, created_at, updated_at
+		SELECT id, user_id, amount, description, category, visibility, split_percentage, expense_date, is_recurring, settled_at, settled_by, created_at, updated_at
 		FROM expenses
 		WHERE id = $1
 	`
@@ -69,6 +72,7 @@ func (s *ExpenseStore) GetByID(ctx context.Context, id string) (*Expense, error)
 	if err := s.db.QueryRowContext(ctx, query, id).Scan(
 		&expense.ID, &expense.UserID, &expense.Amount, &expense.Description, &expense.Category,
 		&expense.Visibility, &expense.SplitPercentage, &expense.ExpenseDate, &expense.IsRecurring,
+		&expense.SettledAt, &expense.SettledBy,
 		&expense.CreatedAt, &expense.UpdatedAt,
 	); err != nil {
 		if err == sql.ErrNoRows {
@@ -83,7 +87,7 @@ func (s *ExpenseStore) GetByID(ctx context.Context, id string) (*Expense, error)
 // List returns expenses visible to the given user, optionally filtered.
 func (s *ExpenseStore) List(ctx context.Context, userID, visibility, from, to string) ([]Expense, error) {
 	query := `
-		SELECT id, user_id, amount, description, category, visibility, split_percentage, expense_date, is_recurring, created_at, updated_at
+		SELECT id, user_id, amount, description, category, visibility, split_percentage, expense_date, is_recurring, settled_at, settled_by, created_at, updated_at
 		FROM expenses
 		WHERE (user_id = $1 OR visibility = 'shared')
 	`
@@ -117,19 +121,49 @@ func (s *ExpenseStore) List(ctx context.Context, userID, visibility, from, to st
 	return scanExpenses(rows)
 }
 
+// Settle toggles the settled status of a shared expense.
+// When settling, it records the current user as settled_by.
+// When unsettling, it clears both settled_at and settled_by.
+func (s *ExpenseStore) Settle(ctx context.Context, id, userID string) (*Expense, error) {
+	query := `
+		UPDATE expenses
+		SET settled_at = CASE WHEN settled_at IS NULL THEN NOW() ELSE NULL END,
+		    settled_by = CASE WHEN settled_at IS NULL THEN $2 ELSE NULL END,
+		    updated_at = NOW()
+		WHERE id = $1 AND visibility = 'shared'
+		RETURNING id, user_id, amount, description, category, visibility, split_percentage, expense_date, is_recurring, settled_at, settled_by, created_at, updated_at
+	`
+
+	expense := &Expense{}
+	if err := s.db.QueryRowContext(ctx, query, id, userID).Scan(
+		&expense.ID, &expense.UserID, &expense.Amount, &expense.Description, &expense.Category,
+		&expense.Visibility, &expense.SplitPercentage, &expense.ExpenseDate, &expense.IsRecurring,
+		&expense.SettledAt, &expense.SettledBy,
+		&expense.CreatedAt, &expense.UpdatedAt,
+	); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("expense not found, not shared, or not visible")
+		}
+		return nil, fmt.Errorf("failed to settle expense: %w", err)
+	}
+
+	return expense, nil
+}
+
 // Update modifies an existing expense.
 func (s *ExpenseStore) Update(ctx context.Context, id, userID, description, category, visibility string, amount, splitPercentage float64, expenseDate time.Time, isRecurring bool) (*Expense, error) {
 	query := `
 		UPDATE expenses
 		SET description = $1, category = $2, visibility = $3, amount = $4, split_percentage = $5, expense_date = $6, is_recurring = $7, updated_at = NOW()
 		WHERE id = $8 AND user_id = $9
-		RETURNING id, user_id, amount, description, category, visibility, split_percentage, expense_date, is_recurring, created_at, updated_at
+		RETURNING id, user_id, amount, description, category, visibility, split_percentage, expense_date, is_recurring, settled_at, settled_by, created_at, updated_at
 	`
 
 	expense := &Expense{}
 	if err := s.db.QueryRowContext(ctx, query, description, category, visibility, amount, splitPercentage, expenseDate, isRecurring, id, userID).Scan(
 		&expense.ID, &expense.UserID, &expense.Amount, &expense.Description, &expense.Category,
 		&expense.Visibility, &expense.SplitPercentage, &expense.ExpenseDate, &expense.IsRecurring,
+		&expense.SettledAt, &expense.SettledBy,
 		&expense.CreatedAt, &expense.UpdatedAt,
 	); err != nil {
 		if err == sql.ErrNoRows {
@@ -167,6 +201,7 @@ func scanExpenses(rows *sql.Rows) ([]Expense, error) {
 		if err := rows.Scan(
 			&expense.ID, &expense.UserID, &expense.Amount, &expense.Description, &expense.Category,
 			&expense.Visibility, &expense.SplitPercentage, &expense.ExpenseDate, &expense.IsRecurring,
+			&expense.SettledAt, &expense.SettledBy,
 			&expense.CreatedAt, &expense.UpdatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("failed to scan expense: %w", err)

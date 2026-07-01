@@ -16,6 +16,7 @@ import (
 type DashboardRepository interface {
 	MonthlySummary(ctx context.Context, userID, month string) (*store.MonthlySummary, error)
 	MonthlyTotals(ctx context.Context, userID, year string) ([]store.MonthData, error)
+	PartnerBalance(ctx context.Context, userID, month string) (*store.PartnerBalance, error)
 }
 
 // ─── DashboardHandler ───────────────────────────────────────────────
@@ -56,6 +57,32 @@ func (h *DashboardHandler) Summary(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondJSON(w, http.StatusOK, map[string]interface{}{"data": summary})
+}
+
+// Balance handles GET /api/v1/dashboard/balance.
+func (h *DashboardHandler) Balance(w http.ResponseWriter, r *http.Request) {
+	userID, ok := userIDFromContext(r)
+	if !ok {
+		respondError(w, http.StatusUnauthorized, "UNAUTHORIZED", "unauthorized")
+		return
+	}
+
+	month := r.URL.Query().Get("month")
+	if month == "" {
+		month = time.Now().Format("2006-01")
+	}
+	if !isValidMonth(month) {
+		respondError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid month format, expected YYYY-MM")
+		return
+	}
+
+	balance, err := h.dashboard.PartnerBalance(r.Context(), userID, month)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to calculate partner balance")
+		return
+	}
+
+	respondJSON(w, http.StatusOK, map[string]interface{}{"data": balance})
 }
 
 // Monthly handles GET /api/v1/dashboard/monthly.

@@ -23,6 +23,10 @@ func (m *mockUserRepository) GetByEmail(ctx context.Context, email string) (*sto
 	return m.user, m.err
 }
 
+func (m *mockUserRepository) GetByID(ctx context.Context, id string) (*store.User, error) {
+	return m.user, m.err
+}
+
 func (m *mockUserRepository) Create(ctx context.Context, email, passwordHash, role string) (*store.User, error) {
 	return m.user, m.err
 }

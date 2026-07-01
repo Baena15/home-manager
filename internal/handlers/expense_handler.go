@@ -23,6 +23,7 @@ type ExpenseRepository interface {
 	List(ctx context.Context, userID, visibility, from, to string) ([]store.Expense, error)
 	Update(ctx context.Context, id, userID, description, category, visibility string, amount, splitPercentage float64, expenseDate time.Time, isRecurring bool) (*store.Expense, error)
 	Delete(ctx context.Context, id, userID string) error
+	Settle(ctx context.Context, id, userID string) (*store.Expense, error)
 }
 
 // ─── ExpenseHandler ─────────────────────────────────────────────────
@@ -206,6 +207,29 @@ func (h *ExpenseHandler) Update(w http.ResponseWriter, r *http.Request) {
 	expense, err := h.expenses.Update(r.Context(), id, userID, req.Description, req.Category, visibility, req.Amount, splitPercentage, expenseDate, req.IsRecurring)
 	if err != nil {
 		respondError(w, http.StatusNotFound, "NOT_FOUND", "expense not found or not owned by user")
+		return
+	}
+
+	respondJSON(w, http.StatusOK, map[string]interface{}{"data": expense})
+}
+
+// Settle handles PATCH /api/v1/expenses/{id}/settle.
+func (h *ExpenseHandler) Settle(w http.ResponseWriter, r *http.Request) {
+	userID, ok := userIDFromContext(r)
+	if !ok {
+		respondError(w, http.StatusUnauthorized, "UNAUTHORIZED", "unauthorized")
+		return
+	}
+
+	id := chi.URLParam(r, "id")
+	if id == "" {
+		respondError(w, http.StatusBadRequest, "BAD_REQUEST", "expense id is required")
+		return
+	}
+
+	expense, err := h.expenses.Settle(r.Context(), id, userID)
+	if err != nil {
+		respondError(w, http.StatusNotFound, "NOT_FOUND", "expense not found or not shared")
 		return
 	}
 

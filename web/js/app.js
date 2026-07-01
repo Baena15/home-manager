@@ -45,6 +45,9 @@
       case 'dashboard':
         renderDashboard();
         break;
+      case 'settlements':
+        renderSettlements();
+        break;
       default:
         renderLists();
     }
@@ -543,13 +546,14 @@
                 <span class="day-total">${dayTotal.toFixed(2)} €</span>
               </div>
               ${items.map(e => `
-                <div class="list-item day-item">
+                <div class="list-item day-item ${e.settled_at ? 'settled' : ''}">
                   <div class="list-item-info">
-                    <p class="list-item-title">${escapeHtml(e.description)} ${visibilityBadge(e.visibility)}</p>
-                    <p class="list-item-subtitle">${e.category ? `${escapeHtml(e.category)} · ` : ''}${e.is_recurring ? '🔄 · ' : ''}${e.visibility === 'shared' ? `${e.split_percentage}% tuyo` : ''}</p>
+                    <p class="list-item-title">${escapeHtml(e.description)} ${visibilityBadge(e.visibility)} ${e.settled_at ? '<span class="badge badge-shared">✅ Pagado</span>' : ''}</p>
+                    <p class="list-item-subtitle">${e.category ? `${escapeHtml(e.category)} · ` : ''}${e.is_recurring ? '🔄 · ' : ''}${e.visibility === 'shared' ? `${e.split_percentage}% tuyo${e.settled_at ? ' · saldado' : ''}` : ''}</p>
                   </div>
                   <div class="list-item-actions">
                     <span class="total-badge">${e.amount.toFixed(2)} €</span>
+                    ${e.visibility === 'shared' ? `<button class="btn-icon settle-expense" data-id="${e.id}" title="${e.settled_at ? 'Marcar como pendiente' : 'Marcar como pagado'}">${e.settled_at ? '↩️' : '✅'}</button>` : ''}
                     ${e.user_id === (currentUser?.id || currentUser?.user_id) ? `<button class="btn-icon delete-expense" data-id="${e.id}">🗑️</button>` : ''}
                   </div>
                 </div>
@@ -558,6 +562,18 @@
           `;
         }).join('')}
       `;
+
+      container.querySelectorAll('.settle-expense').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          try {
+            await api('PATCH', `/api/v1/expenses/${btn.dataset.id}/settle`);
+            showToast('Gasto actualizado');
+            loadExpenses();
+          } catch (err) {
+            showToast(err.message);
+          }
+        });
+      });
 
       container.querySelectorAll('.delete-expense').forEach(btn => {
         btn.addEventListener('click', async () => {
@@ -720,6 +736,131 @@
     }
   }
 
+  // ─── Settlements view ─────────────────────────────────────────────
+
+  async function renderSettlements() {
+    const today = new Date().toISOString().split('T')[0];
+    main.innerHTML = `
+      <div class="card">
+        <h2 class="card-title">Registrar pago</h2>
+        <form id="settlement-form">
+          <div class="form-group">
+            <label for="settle-amount">Importe (€)</label>
+            <input type="number" step="0.01" id="settle-amount" class="form-control" placeholder="Importe" required>
+          </div>
+          <div class="form-group">
+            <label for="settle-to">A favor de</label>
+            <select id="settle-to" class="form-control" required>
+              <option value="">Selecciona usuario</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="settle-description">Descripción (opcional)</label>
+            <input type="text" id="settle-description" class="form-control" placeholder="Ej. Pago del crédito">
+          </div>
+          <div class="form-group">
+            <label for="settle-date">Fecha</label>
+            <input type="date" id="settle-date" class="form-control" value="${today}" required>
+          </div>
+          <button type="submit" class="btn btn-primary">Guardar pago</button>
+        </form>
+      </div>
+      <div class="card">
+        <div class="flex gap-1">
+          <input type="month" id="settle-month" class="form-control" value="${today.slice(0, 7)}">
+        </div>
+      </div>
+      <div id="settlements-list"></div>
+    `;
+
+    try {
+      const month = document.getElementById('settle-month').value;
+      const balanceData = await api('GET', `/api/v1/dashboard/balance?month=${month}`);
+      const balance = balanceData.data;
+      const select = document.getElementById('settle-to');
+      if (balance.partner_id) {
+        const opt = document.createElement('option');
+        opt.value = balance.partner_id;
+        opt.textContent = displayName(balance.partner_email);
+        select.appendChild(opt);
+      }
+    } catch (err) {
+      showToast(err.message);
+    }
+
+    document.getElementById('settlement-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const body = {
+        amount: parseFloat(document.getElementById('settle-amount').value),
+        to_user_id: document.getElementById('settle-to').value,
+        description: document.getElementById('settle-description').value,
+        settlement_date: document.getElementById('settle-date').value,
+      };
+
+      try {
+        await api('POST', '/api/v1/settlements', body);
+        showToast('Pago registrado');
+        renderSettlements();
+      } catch (err) {
+        showToast(err.message);
+      }
+    });
+
+    document.getElementById('settle-month').addEventListener('change', loadSettlements);
+    await loadSettlements();
+  }
+
+  async function loadSettlements() {
+    const month = document.getElementById('settle-month').value;
+    const { from, to } = getMonthBounds(month);
+
+    try {
+      const params = new URLSearchParams();
+      params.set('from', from);
+      params.set('to', to);
+
+      const data = await api('GET', `/api/v1/settlements?${params.toString()}`);
+      const container = document.getElementById('settlements-list');
+      if (!data.data || data.data.length === 0) {
+        container.innerHTML = '<div class="empty-state">No hay pagos este mes</div>';
+        return;
+      }
+
+      const currentUserId = currentUser?.id || currentUser?.user_id;
+      container.innerHTML = data.data.map(s => {
+        const isPayer = s.from_user_id === currentUserId;
+        const otherName = displayName(isPayer ? s.to_user_email : s.from_user_email);
+        return `
+          <div class="list-item">
+            <div class="list-item-info">
+              <p class="list-item-title">${isPayer ? 'Pagaste a' : 'Te pagó'} ${otherName}</p>
+              <p class="list-item-subtitle">${s.description || 'Sin descripción'} · ${formatDate(s.settlement_date)}</p>
+            </div>
+            <div class="list-item-actions">
+              <span class="total-badge ${isPayer ? 'expense' : 'income'}">${s.amount.toFixed(2)} €</span>
+              <button class="btn-icon delete-settlement" data-id="${s.id}">🗑️</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      container.querySelectorAll('.delete-settlement').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (!confirm('¿Eliminar este pago?')) return;
+          try {
+            await api('DELETE', `/api/v1/settlements/${btn.dataset.id}`);
+            showToast('Pago eliminado');
+            loadSettlements();
+          } catch (err) {
+            showToast(err.message);
+          }
+        });
+      });
+    } catch (err) {
+      showToast(err.message);
+    }
+  }
+
   // ─── Dashboard view ───────────────────────────────────────────────
 
   async function renderDashboard() {
@@ -760,8 +901,19 @@
   async function loadSummary() {
     const month = document.getElementById('dash-month').value;
     try {
-      const data = await api('GET', `/api/v1/dashboard/summary?month=${month}`);
-      const summary = data.data;
+      const [summaryRes, balanceRes] = await Promise.all([
+        api('GET', `/api/v1/dashboard/summary?month=${month}`),
+        api('GET', `/api/v1/dashboard/balance?month=${month}`),
+      ]);
+      const summary = summaryRes.data;
+      const balance = balanceRes.data;
+      const partnerName = displayName(balance.partner_email);
+      const balanceClass = balance.amount === 0 ? '' : (balance.you_owe ? 'negative' : 'positive');
+      const balanceText = balance.amount === 0
+        ? 'No hay deudas pendientes'
+        : balance.you_owe
+          ? `Le debes ${balance.amount.toFixed(2)} € a ${partnerName}`
+          : `${partnerName} te debe ${balance.amount.toFixed(2)} €`;
       const container = document.getElementById('summary-cards');
       container.innerHTML = `
         <div class="summary-card income">
@@ -779,7 +931,17 @@
           <p class="summary-label">Balance</p>
           <p class="summary-value">${summary.balance.toFixed(2)} €</p>
         </div>
+        <div class="summary-card ${balanceClass}" style="grid-column: 1 / -1;">
+          <p class="summary-label">Liquidación con ${partnerName}</p>
+          <p class="summary-value">${balanceText}</p>
+          <button id="dash-settle-btn" class="btn btn-sm btn-primary mt-1" style="width:auto">Registrar pago</button>
+        </div>
       `;
+
+      const settleBtn = document.getElementById('dash-settle-btn');
+      if (settleBtn) {
+        settleBtn.addEventListener('click', () => navigate('settlements'));
+      }
     } catch (err) {
       showToast(err.message);
     }
@@ -991,6 +1153,14 @@
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+  }
+
+  function displayName(email) {
+    if (!email) return 'tu pareja';
+    const local = email.split('@')[0];
+    return local
+      .replace(/[._]/g, ' ')
+      .replace(/\b\w/g, c => c.toUpperCase());
   }
 
   function formatDate(dateString) {

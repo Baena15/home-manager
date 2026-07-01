@@ -3,6 +3,7 @@ package store
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 )
 
@@ -27,6 +28,16 @@ type MonthData struct {
 	PrivateExpenseTotal float64 `json:"private_expense_total"`
 	ExpenseTotal        float64 `json:"expense_total"`
 	Balance             float64 `json:"balance"`
+}
+
+// ─── PartnerBalance ─────────────────────────────────────────────────
+
+// PartnerBalance holds the settlement balance between two household users.
+type PartnerBalance struct {
+	PartnerID    string  `json:"partner_id"`
+	PartnerEmail string  `json:"partner_email"`
+	Amount       float64 `json:"amount"`
+	YouOwe       bool    `json:"you_owe"`
 }
 
 // ─── DashboardStore ─────────────────────────────────────────────────
@@ -85,6 +96,70 @@ func (s *DashboardStore) MonthlySummary(ctx context.Context, userID, month strin
 
 	summary.Balance = summary.IncomeTotal - summary.ExpenseTotal
 	return summary, nil
+}
+
+// PartnerBalance calculates the net settlement balance between the given user
+// and the other household user for shared expenses and recorded settlements in a month.
+// A positive amount with YouOwe=false means the partner owes money to the user.
+// A positive amount with YouOwe=true means the user owes money to the partner.
+func (s *DashboardStore) PartnerBalance(ctx context.Context, userID, month string) (*PartnerBalance, error) {
+	partnerQuery := `
+		SELECT id, email
+		FROM users
+		WHERE id != $1
+		LIMIT 1
+	`
+
+	balance := &PartnerBalance{}
+	if err := s.db.QueryRowContext(ctx, partnerQuery, userID).Scan(&balance.PartnerID, &balance.PartnerEmail); err != nil {
+		if err == sql.ErrNoRows {
+			return &PartnerBalance{}, nil
+		}
+		return nil, fmt.Errorf("failed to get partner: %w", err)
+	}
+
+	expenseQuery := `
+		SELECT COALESCE(SUM(CASE
+			WHEN user_id = $1 AND settled_at IS NULL THEN amount * (100 - split_percentage) / 100
+			WHEN user_id != $1 AND settled_at IS NULL THEN -1 * amount * (100 - split_percentage) / 100
+			ELSE 0
+		END), 0)
+		FROM expenses
+		WHERE visibility = 'shared'
+		  AND TO_CHAR(expense_date, 'YYYY-MM') = $2
+	`
+
+	var expenseNet float64
+	if err := s.db.QueryRowContext(ctx, expenseQuery, userID, month).Scan(&expenseNet); err != nil {
+		return nil, fmt.Errorf("failed to calculate expense balance: %w", err)
+	}
+
+	settlementQuery := `
+		SELECT COALESCE(SUM(CASE
+			WHEN to_user_id = $1 AND from_user_id != $1 THEN amount
+			WHEN from_user_id = $1 AND to_user_id != $1 THEN -1 * amount
+			ELSE 0
+		END), 0)
+		FROM settlements
+		WHERE (from_user_id = $1 OR to_user_id = $1)
+		  AND TO_CHAR(settlement_date, 'YYYY-MM') = $2
+	`
+
+	var settlementNet float64
+	if err := s.db.QueryRowContext(ctx, settlementQuery, userID, month).Scan(&settlementNet); err != nil {
+		return nil, fmt.Errorf("failed to calculate settlement balance: %w", err)
+	}
+
+	net := expenseNet + settlementNet
+	if net >= 0 {
+		balance.Amount = net
+		balance.YouOwe = false
+	} else {
+		balance.Amount = -net
+		balance.YouOwe = true
+	}
+
+	return balance, nil
 }
 
 // MonthlyTotals returns income and expense totals for each month of the year.

@@ -16,6 +16,7 @@ import (
 // UserRepository defines the interface for user data access.
 type UserRepository interface {
 	GetByEmail(ctx context.Context, email string) (*store.User, error)
+	GetByID(ctx context.Context, id string) (*store.User, error)
 	Create(ctx context.Context, email, passwordHash, role string) (*store.User, error)
 }
 
