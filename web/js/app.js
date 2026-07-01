@@ -560,12 +560,12 @@
               ${items.map(e => `
                 <div class="list-item day-item ${e.settled_at ? 'settled' : ''}">
                   <div class="list-item-info">
-                    <p class="list-item-title">${escapeHtml(e.description)} ${visibilityBadge(e.visibility)} ${e.settled_at ? '<span class="badge badge-shared">✅ Pagado</span>' : ''}</p>
+                    <p class="list-item-title">${escapeHtml(e.description)} ${visibilityBadge(e.visibility)} ${e.settled_at ? '<span class="badge badge-shared">✅ Saldado</span>' : ''}</p>
                     <p class="list-item-subtitle">${e.category ? `${escapeHtml(e.category)} · ` : ''}${e.is_recurring ? '🔄 · ' : ''}${e.visibility === 'shared' ? `${e.split_percentage}% tuyo${e.settled_at ? ' · saldado' : ''}` : ''}</p>
                   </div>
                   <div class="list-item-actions">
                     <span class="total-badge">${e.amount.toFixed(2)} €</span>
-                    ${e.visibility === 'shared' ? `<button class="btn-icon settle-expense" data-id="${e.id}" title="${e.settled_at ? 'Marcar como pendiente' : 'Marcar como pagado'}">${e.settled_at ? '↩️' : '✅'}</button>` : ''}
+                    ${e.visibility === 'shared' ? `<button class="btn-icon settle-expense" data-id="${e.id}" title="${e.settled_at ? 'Marcar como pendiente' : 'Marcar como saldado'}">${e.settled_at ? '↩️' : '✅'}</button>` : ''}
                     ${e.user_id === (currentUser?.id || currentUser?.user_id) ? `<button class="btn-icon delete-expense" data-id="${e.id}">🗑️</button>` : ''}
                   </div>
                 </div>
@@ -786,8 +786,7 @@
     `;
 
     try {
-      const month = document.getElementById('settle-month').value;
-      const balanceData = await api('GET', `/api/v1/dashboard/balance?month=${month}`);
+      const balanceData = await api('GET', '/api/v1/dashboard/balance');
       const balance = balanceData.data;
       const select = document.getElementById('settle-to');
       if (balance.partner_id) {
@@ -915,14 +914,14 @@
     try {
       const [summaryRes, balanceRes] = await Promise.all([
         api('GET', `/api/v1/dashboard/summary?month=${month}`),
-        api('GET', `/api/v1/dashboard/balance?month=${month}`),
+        api('GET', '/api/v1/dashboard/balance'),
       ]);
       const summary = summaryRes.data;
       const balance = balanceRes.data;
       const partnerName = displayName(balance.partner_email);
       const balanceClass = balance.amount === 0 ? '' : (balance.you_owe ? 'negative' : 'positive');
       const balanceText = balance.amount === 0
-        ? 'No hay deudas pendientes'
+        ? 'Estáis a mano'
         : balance.you_owe
           ? `Le debes ${balance.amount.toFixed(2)} € a ${partnerName}`
           : `${partnerName} te debe ${balance.amount.toFixed(2)} €`;
@@ -945,7 +944,10 @@
         </div>
         <div class="summary-card ${balanceClass}" style="grid-column: 1 / -1;">
           <p class="summary-label">Liquidación con ${partnerName}</p>
-          <p class="summary-value">${balanceText}</p>
+          <p class="summary-value" style="font-size:0.95rem;margin-bottom:0.35rem;">${balanceText}</p>
+          <p class="summary-detail" style="font-size:0.75rem;color:#6B7280;">
+            ${partnerName} te debe ${balance.you_are_owed.toFixed(2)} € · Tú le debes ${balance.you_owe_amount.toFixed(2)} €
+          </p>
           <button id="dash-settle-btn" class="btn btn-sm btn-primary mt-1" style="width:auto">Registrar pago</button>
         </div>
       `;

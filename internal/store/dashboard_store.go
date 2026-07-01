@@ -38,6 +38,8 @@ type PartnerBalance struct {
 	PartnerEmail string  `json:"partner_email"`
 	Amount       float64 `json:"amount"`
 	YouOwe       bool    `json:"you_owe"`
+	YouAreOwed   float64 `json:"you_are_owed"`
+	YouOweAmount float64 `json:"you_owe_amount"`
 }
 
 // ─── DashboardStore ─────────────────────────────────────────────────
@@ -99,10 +101,11 @@ func (s *DashboardStore) MonthlySummary(ctx context.Context, userID, month strin
 }
 
 // PartnerBalance calculates the net settlement balance between the given user
-// and the other household user for shared expenses and recorded settlements in a month.
-// A positive amount with YouOwe=false means the partner owes money to the user.
-// A positive amount with YouOwe=true means the user owes money to the partner.
-func (s *DashboardStore) PartnerBalance(ctx context.Context, userID, month string) (*PartnerBalance, error) {
+// and the other household user across all shared expenses and recorded settlements.
+// YouAreOwed is the partner's share of shared expenses paid by the user.
+// YouOweAmount is the user's share of shared expenses paid by the partner.
+// Amount is the net balance: YouAreOwed minus YouOweAmount minus settlements.
+func (s *DashboardStore) PartnerBalance(ctx context.Context, userID string) (*PartnerBalance, error) {
 	partnerQuery := `
 		SELECT id, email
 		FROM users
@@ -118,39 +121,51 @@ func (s *DashboardStore) PartnerBalance(ctx context.Context, userID, month strin
 		return nil, fmt.Errorf("failed to get partner: %w", err)
 	}
 
-	expenseQuery := `
-		SELECT COALESCE(SUM(CASE
-			WHEN user_id = $1 AND settled_at IS NULL THEN amount * (100 - split_percentage) / 100
-			WHEN user_id != $1 AND settled_at IS NULL THEN -1 * amount * (100 - split_percentage) / 100
-			ELSE 0
-		END), 0)
+	expenseOwedQuery := `
+		SELECT COALESCE(SUM(amount * (100 - split_percentage) / 100), 0)
 		FROM expenses
 		WHERE visibility = 'shared'
-		  AND TO_CHAR(expense_date, 'YYYY-MM') = $2
+		  AND user_id = $1
+		  AND settled_at IS NULL
 	`
 
-	var expenseNet float64
-	if err := s.db.QueryRowContext(ctx, expenseQuery, userID, month).Scan(&expenseNet); err != nil {
-		return nil, fmt.Errorf("failed to calculate expense balance: %w", err)
-	}
+	expenseOweQuery := `
+		SELECT COALESCE(SUM(amount * (100 - split_percentage) / 100), 0)
+		FROM expenses
+		WHERE visibility = 'shared'
+		  AND user_id != $1
+		  AND settled_at IS NULL
+	`
 
-	settlementQuery := `
-		SELECT COALESCE(SUM(CASE
-			WHEN to_user_id = $1 AND from_user_id != $1 THEN amount
-			WHEN from_user_id = $1 AND to_user_id != $1 THEN -1 * amount
-			ELSE 0
-		END), 0)
+	settlementsReceivedQuery := `
+		SELECT COALESCE(SUM(amount), 0)
 		FROM settlements
-		WHERE (from_user_id = $1 OR to_user_id = $1)
-		  AND TO_CHAR(settlement_date, 'YYYY-MM') = $2
+		WHERE to_user_id = $1 AND from_user_id != $1
 	`
 
-	var settlementNet float64
-	if err := s.db.QueryRowContext(ctx, settlementQuery, userID, month).Scan(&settlementNet); err != nil {
-		return nil, fmt.Errorf("failed to calculate settlement balance: %w", err)
+	settlementsSentQuery := `
+		SELECT COALESCE(SUM(amount), 0)
+		FROM settlements
+		WHERE from_user_id = $1 AND to_user_id != $1
+	`
+
+	if err := s.db.QueryRowContext(ctx, expenseOwedQuery, userID).Scan(&balance.YouAreOwed); err != nil {
+		return nil, fmt.Errorf("failed to calculate amount owed to user: %w", err)
+	}
+	if err := s.db.QueryRowContext(ctx, expenseOweQuery, userID).Scan(&balance.YouOweAmount); err != nil {
+		return nil, fmt.Errorf("failed to calculate amount user owes: %w", err)
 	}
 
-	net := expenseNet + settlementNet
+	var settlementsReceived float64
+	var settlementsSent float64
+	if err := s.db.QueryRowContext(ctx, settlementsReceivedQuery, userID).Scan(&settlementsReceived); err != nil {
+		return nil, fmt.Errorf("failed to calculate settlements received: %w", err)
+	}
+	if err := s.db.QueryRowContext(ctx, settlementsSentQuery, userID).Scan(&settlementsSent); err != nil {
+		return nil, fmt.Errorf("failed to calculate settlements sent: %w", err)
+	}
+
+	net := (balance.YouAreOwed - settlementsReceived) - (balance.YouOweAmount - settlementsSent)
 	if net >= 0 {
 		balance.Amount = net
 		balance.YouOwe = false

@@ -16,7 +16,7 @@ import (
 type DashboardRepository interface {
 	MonthlySummary(ctx context.Context, userID, month string) (*store.MonthlySummary, error)
 	MonthlyTotals(ctx context.Context, userID, year string) ([]store.MonthData, error)
-	PartnerBalance(ctx context.Context, userID, month string) (*store.PartnerBalance, error)
+	PartnerBalance(ctx context.Context, userID string) (*store.PartnerBalance, error)
 }
 
 // ─── DashboardHandler ───────────────────────────────────────────────
@@ -67,16 +67,7 @@ func (h *DashboardHandler) Balance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	month := r.URL.Query().Get("month")
-	if month == "" {
-		month = time.Now().Format("2006-01")
-	}
-	if !isValidMonth(month) {
-		respondError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid month format, expected YYYY-MM")
-		return
-	}
-
-	balance, err := h.dashboard.PartnerBalance(r.Context(), userID, month)
+	balance, err := h.dashboard.PartnerBalance(r.Context(), userID)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to calculate partner balance")
 		return

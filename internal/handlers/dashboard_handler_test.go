@@ -27,7 +27,7 @@ func (m *mockDashboardRepository) MonthlyTotals(ctx context.Context, userID, yea
 	return m.totals, m.err
 }
 
-func (m *mockDashboardRepository) PartnerBalance(ctx context.Context, userID, month string) (*store.PartnerBalance, error) {
+func (m *mockDashboardRepository) PartnerBalance(ctx context.Context, userID string) (*store.PartnerBalance, error) {
 	return m.balance, m.err
 }
 
@@ -36,14 +36,16 @@ func TestDashboardHandler_Balance_Success(t *testing.T) {
 		balance: &store.PartnerBalance{
 			PartnerID:    "partner-1",
 			PartnerEmail: "mariajose@home.local",
-			Amount:       300,
+			Amount:       91,
 			YouOwe:       false,
+			YouAreOwed:   300,
+			YouOweAmount: 209,
 		},
 	}
 	handler := NewDashboardHandler(repo)
 
 	ctx := context.WithValue(context.Background(), middleware.ClaimsKey, &auth.Claims{UserID: "user-1"})
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/dashboard/balance?month=2026-07", nil).WithContext(ctx)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/dashboard/balance", nil).WithContext(ctx)
 	rec := httptest.NewRecorder()
 
 	handler.Balance(rec, req)
@@ -65,26 +67,17 @@ func TestDashboardHandler_Balance_Success(t *testing.T) {
 	if data["partner_email"] != "mariajose@home.local" {
 		t.Errorf("partner_email = %q, want %q", data["partner_email"], "mariajose@home.local")
 	}
-	if data["amount"] != float64(300) {
-		t.Errorf("amount = %v, want %v", data["amount"], 300)
+	if data["amount"] != float64(91) {
+		t.Errorf("amount = %v, want %v", data["amount"], 91)
+	}
+	if data["you_are_owed"] != float64(300) {
+		t.Errorf("you_are_owed = %v, want %v", data["you_are_owed"], 300)
+	}
+	if data["you_owe_amount"] != float64(209) {
+		t.Errorf("you_owe_amount = %v, want %v", data["you_owe_amount"], 209)
 	}
 	if data["you_owe"] != false {
 		t.Errorf("you_owe = %v, want false", data["you_owe"])
-	}
-}
-
-func TestDashboardHandler_Balance_InvalidMonth(t *testing.T) {
-	repo := &mockDashboardRepository{}
-	handler := NewDashboardHandler(repo)
-
-	ctx := context.WithValue(context.Background(), middleware.ClaimsKey, &auth.Claims{UserID: "user-1"})
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/dashboard/balance?month=invalid", nil).WithContext(ctx)
-	rec := httptest.NewRecorder()
-
-	handler.Balance(rec, req)
-
-	if rec.Code != http.StatusBadRequest {
-		t.Fatalf("status = %d, want %d", rec.Code, http.StatusBadRequest)
 	}
 }
 
@@ -92,7 +85,7 @@ func TestDashboardHandler_Balance_Unauthorized(t *testing.T) {
 	repo := &mockDashboardRepository{}
 	handler := NewDashboardHandler(repo)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/dashboard/balance?month=2026-07", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/dashboard/balance", nil)
 	rec := httptest.NewRecorder()
 
 	handler.Balance(rec, req)
